@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "\n# test Caret package\n\nlibrary(tidyverse)\nlibrary(caret)\nlibrary(parallel)\nlibrary(doParallel)\n\n# read training & testing data\ndat_train <- read_csv(\"./data/clinvar_conflicting_train.csv\")\ndat_test <- read_csv(\"./data/clinvar_conflicting_test.csv\")\n\ndat_train %<>% mutate(class = factor(class))\ndat_test %<>% mutate(class = factor(class))\n\n# # Turn all categorical variables into dummies. \n# dummies_train <- dummyVars(class ~ ., data = dat_train)\n# \n# dat_train_new <- predict(dummies_train, newdata = dat_train)\n# dat_test_new <- predict(dummies_train, newdata = dat_test)\n\nfitControl <- trainControl(## 10-fold CV\n    method = \"repeatedcv\",\n    number = 10,\n    ## repeated ten times\n    repeats = 2)\n\nstart_time <- Sys.time()\n\nn_core <- detectCores()\ncl <- makePSOCKcluster(n_core)\nregisterDoParallel(cl)\n\n\nset.seed(2046)\n\ngbmFit <- train(class ~ ., \n                data = dat_train, \n                method = \"gbm\", \n                trControl = fitControl,\n                verbose = FALSE,\n                metric = \"Accuracy\")\n\nstopCluster(cl)\n\nend_time <- Sys.time()\ndifftime(end_time, start_time, units = \"mins\")\n\ngbmFit\n\ndat_train$class_pred_gbm <- predict(gbmFit, newdata = dat_train)\ndat_test$class_pred_gbm <- predict(gbmFit, newdata = dat_test)\n\ndat_test %>%\n    mutate(is_pred_right = ifelse(class == class_pred_gbm, 1, 0)) %>%\n    summarise(acc = mean(is_pred_right))\n\n# dat_train_var_unq <- dat_train %>%\n#     select_if(is.character) %>%\n#     gather(key = var, value = value) %>%\n#     distinct()\n",
+    "created" : 1566049011305.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3133814709",
+    "id" : "807EF031",
+    "lastKnownWriteTime" : 1566077477,
+    "last_content_update" : 1566077477823,
+    "path" : "~/DataScience/R_Python_ml_compare/src/1_ml_test_caret.R",
+    "project_path" : "src/1_ml_test_caret.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

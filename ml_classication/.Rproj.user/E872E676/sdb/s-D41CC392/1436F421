@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "# data cleaning - create the same clean datasets for R Caret and Python Sklearn comparison\n\nlibrary(tidyverse)\nlibrary(stringr)\nlibrary(magrittr)\n\ndat_raw <- read_csv(\"./data/clinvar_conflicting.csv\")\n\nglimpse(dat_raw)\n\n# check missing value, unique values, etc.\n\nfct_dat_summary <- . %>%\n    summarise_all(list(\n        fct_n_missing = ~sum(is.na(.)),\n        fct_n_unq = ~unique(.) %>% length,\n        fct_unq_val10 = ~unique(.) %>% na.omit %>% head(n = 10) %>% str_c(collapse = \", \"),\n        fct_dtype = ~class(.))) %>%\n    gather(key = var, value = value) %>%\n    separate(col = var, into = c(\"var\", \"fct\"), sep = \"_fct_\") %>%\n    spread(key = fct, value = value)\n\n\ndat_summary <- fct_dat_summary(dat_raw)\n\ndat_summary %<>% \n    mutate(n_missing = n_missing %>% as.numeric,\n           n_unq = n_unq %>% as.numeric)\n\n# drop variables with too many missing values (e.g. > 5000)\n# drop character variables with too many unique categories (e.g. > 100)\nvar_keep <- dat_summary %>% \n    filter(!(n_missing > 5000 | (dtype == \"character\" & n_unq > 100))) %>% \n    pull(var)\n\n# there are 58543 data left, good size for experiment\ndat_clean <- dat_raw %>%\n    select(var_keep) %>%\n    na.omit()\n\ndat_clean %>% fct_dat_summary() %>% arrange(n_unq)\n\n# drop biotype and feature_type - only take 1 value for all records\ndat_clean %<>% set_names(tolower(names(.))) %>%\n    select(-biotype, -feature_type, -consequence) %>%\n    mutate(class = as.factor(class))\n\n\n\n# create training and testing data ----------------------------------------\n\nset.seed(1234)\nidx_train <- tibble(idx = 1:nrow(dat_clean)) %>% \n    sample_frac(.7, replace = F) %>%\n    pull(idx)\n\n# 70% random sample for training\ndat_train <- dat_clean[idx_train, ]\n# 30% random sample for testing\ndat_test <- dat_clean[-idx_train, ] \n\n\n# save to disk ------------------------------------------------------------\n\ndat_train %>% write_csv(\"./data/clinvar_conflicting_train.csv\")\ndat_test %>% write_csv(\"./data/clinvar_conflicting_test.csv\")",
+    "created" : 1566046219551.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4012002785",
+    "id" : "1436F421",
+    "lastKnownWriteTime" : 1566077071,
+    "last_content_update" : 1566077071292,
+    "path" : "~/DataScience/R_Python_ml_compare/src/0_dat_clean.R",
+    "project_path" : "src/0_dat_clean.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
